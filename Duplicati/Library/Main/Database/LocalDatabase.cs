@@ -43,6 +43,7 @@ namespace Duplicati.Library.Main.Database
 
         protected readonly System.Data.IDbConnection m_connection;
         protected readonly long m_operationid = -1;
+        private bool m_hasExecutedVacuum;
 
         private readonly System.Data.IDbCommand m_updateremotevolumeCommand;
         private readonly System.Data.IDbCommand m_selectremotevolumesCommand;
@@ -573,6 +574,7 @@ AND Fileset.ID NOT IN
 
         public void Vacuum()
         {
+            m_hasExecutedVacuum = true;
             using (var cmd = m_connection.CreateCommand())
                 cmd.ExecuteNonQuery("VACUUM");
         }
@@ -1463,15 +1465,21 @@ ORDER BY
 
             if (ShouldCloseConnection && m_connection != null)
             {
-                if (m_connection.State == System.Data.ConnectionState.Open)
+                if (m_connection.State == System.Data.ConnectionState.Open && !m_hasExecutedVacuum)
                 {
-                    using (IDbTransaction transaction = m_connection.BeginTransaction())
+                    using (var transaction = m_connection.BeginTransaction())
+                    using (var command = m_connection.CreateCommand(transaction))
                     {
-                        using (IDbCommand command = m_connection.CreateCommand(transaction))
+                        // SQLite recommends that PRAGMA optimize is run just before closing each database connection.
+                        command.ExecuteNonQuery("PRAGMA optimize");
+
+                        try
                         {
-                            // SQLite recommends that PRAGMA optimize is run just before closing each database connection.
-                            command.ExecuteNonQuery("PRAGMA optimize");
                             transaction.Commit();
+                        }
+                        catch (System.Data.SQLite.SQLiteException ex)
+                        {
+                            Logging.Log.WriteVerboseMessage(LOGTAG, "FailedToCommitTransaction", ex, "Failed to commit transaction after pragma optimize, usually caused by the a no-op transaction");
                         }
                     }
 

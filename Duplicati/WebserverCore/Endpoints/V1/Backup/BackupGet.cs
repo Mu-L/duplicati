@@ -258,7 +258,7 @@ public class BackupGet : IEndpointV1
 
         byte[] data = EncodeDataForExport(connection, backup, passphrase);
 
-        string filename = Library.Utility.Uri.UrlEncode(backup.Name + "-duplicati-config.json");
+        string filename = Uri.EscapeDataString(backup.Name + "-duplicati-config.json");
         if (!string.IsNullOrWhiteSpace(passphrase))
             filename += ".aes";
 
@@ -292,7 +292,7 @@ public class BackupGet : IEndpointV1
     }
 
     private static Dto.IsDbUsedElsewhereDto ExecuteGetIsdbUsedElsewhere(IBackup bk)
-        => new Dto.IsDbUsedElsewhereDto(Library.Main.DatabaseLocator.IsDatabasePathInUse(bk.DBPath));
+        => new Dto.IsDbUsedElsewhereDto(Library.Main.CLIDatabaseLocator.IsDatabasePathInUse(bk.DBPath));
 
     private static Dto.IsBackupActiveDto ExecuteGetIsActive(IWorkerThreadsManager workerThreadsManager, IBackup bk)
     {
