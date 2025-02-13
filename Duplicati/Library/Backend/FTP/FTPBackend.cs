@@ -272,7 +272,7 @@ namespace Duplicati.Library.Backend
         /// <param name="url">Configured url.</param>
         /// <param name="options">Configured options. cannot be null.</param>
         [SuppressMessage("ReSharper", "VirtualMemberCallInConstructor")] // The behavior of accessing the virtual properties is as expected
-        public FTP(string url, Dictionary<string, string> options)
+        public FTP(string url, Dictionary<string, string?> options)
         {
             _accepAllCertificates = CoreUtility.ParseBoolOption(options, OPTION_ACCEPT_ANY_CERTIFICATE);
 
@@ -324,7 +324,7 @@ namespace Duplicati.Library.Backend
 
             var dataConnectionType = CoreUtility.ParseEnumOption(options, CONFIG_KEY_FTP_DATA_CONNECTION_TYPE, DEFAULT_DATA_CONNECTION_TYPE);
             var encryptionMode = CoreUtility.ParseEnumOption(options, CONFIG_KEY_FTP_ENCRYPTION_MODE, DEFAULT_ENCRYPTION_MODE);
-            var sslProtocols = CoreUtility.ParseEnumOption(options, CONFIG_KEY_FTP_SSL_PROTOCOLS, DEFAULT_SSL_PROTOCOLS);
+            var sslProtocols = CoreUtility.ParseFlagsOption(options, CONFIG_KEY_FTP_SSL_PROTOCOLS, DEFAULT_SSL_PROTOCOLS);
 
             // Process options of the legacy FTP backend
             if (ProtocolKey == "ftp")
