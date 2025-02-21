@@ -28,6 +28,8 @@ using Duplicati.Server.Database;
 using Microsoft.AspNetCore.Connections;
 using Duplicati.Library.Utility;
 
+#nullable enable
+
 namespace Duplicati.Server;
 
 /// <summary>
@@ -97,6 +99,10 @@ public static class WebServerLoader
     /// </summary>
     public const string OPTION_WEBSERVICE_SPAPATHS = "webservice-spa-paths";
     /// <summary>
+    /// The CORS origins to allow
+    /// </summary>
+    public const string OPTION_WEBSERVICE_CORS_ORIGINS = "webservice-cors-origins";
+    /// <summary>
     /// Option for setting the webservice timezone
     /// </summary>
     public const string OPTION_WEBSERVICE_TIMEZONE = "webservice-timezone";
@@ -152,6 +158,7 @@ public static class WebServerLoader
     /// <param name="AllowedHostnames">The allowed hostnames</param>
     /// <param name="DisableStaticFiles">If static files should be disabled</param>
     /// <param name="SPAPaths">The paths to serve as SPAs</param>
+    /// <param name="CorsOrigins">The origins to allow for CORS</param>
     public record ParsedWebserverSettings(
         string WebRoot,
         int Port,
@@ -160,7 +167,8 @@ public static class WebServerLoader
         string Servername,
         IEnumerable<string> AllowedHostnames,
         bool DisableStaticFiles,
-        IEnumerable<string> SPAPaths
+        IEnumerable<string> SPAPaths,
+        IEnumerable<string> CorsOrigins
     );
 
 
@@ -169,7 +177,7 @@ public static class WebServerLoader
     /// </summary>
     /// <param name="options">A set of options</param>
     /// <param name="createServer">The method to start the server</param>
-    public static async Task<TServer> TryRunServer<TServer>(IReadOnlyDictionary<string, string> options, Connection connection, Func<ParsedWebserverSettings, Task<TServer>> createServer)
+    public static async Task<TServer> TryRunServer<TServer>(IReadOnlyDictionary<string, string?> options, Connection connection, Func<ParsedWebserverSettings, Task<TServer>> createServer)
     {
         var ports = Enumerable.Empty<int>();
         options.TryGetValue(OPTION_PORT, out var portstring);
@@ -225,7 +233,7 @@ public static class WebServerLoader
 
         if (options.ContainsKey(OPTION_WEBROOT))
         {
-            string userroot = options[OPTION_WEBROOT];
+            var userroot = options[OPTION_WEBROOT];
 #if DEBUG
             //In debug mode we do not care where the path points
 #else
@@ -249,7 +257,8 @@ public static class WebServerLoader
             string.Format("{0} v{1}", Library.AutoUpdater.AutoUpdateSettings.AppName, Library.AutoUpdater.UpdaterManager.SelfVersion.Version),
             (connection.ApplicationSettings.AllowedHostnames ?? string.Empty).Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries),
             Duplicati.Library.Utility.Utility.ParseBoolOption(options, OPTION_WEBSERVICE_API_ONLY),
-            spaPathsString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+            spaPathsString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries),
+            options.GetValueOrDefault(OPTION_WEBSERVICE_CORS_ORIGINS)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Enumerable.Empty<string>()
         );
 
         // Materialize the list of ports, and move the last-used port to the front, so we try the last-known port first
